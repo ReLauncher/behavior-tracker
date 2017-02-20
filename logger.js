@@ -1,15 +1,11 @@
-var EDA_LOGGER = EDA_LOGGER || (function() {
+var BT = BT || (function() {
     var settings = {
             session: Math.floor(Math.random() * 1000000) + 1,
-            activity_interval: 2000,
-            debug: true,
-            firebase: {
-                bucket: "IMAGE-TAGGING-APP"
-            }
+            debug: false
         }
         // A log function which can be easily turned of using debug variable
     var log = function(message) {
-        if (settings.debug) console.log("[EDA_LOGGER] LOG: " + message);
+        if (settings.debug) console.log("[BT] LOG: " + message);
     };
     function fullPath(el){
         var names = [];
@@ -42,15 +38,15 @@ var EDA_LOGGER = EDA_LOGGER || (function() {
         return text;
     }
     var _args = {
-        key_name: "test_name",
-        key_value: "test_value"
+        firebase_bucket: "IMAGE-TAGGING-APP",
+        page_id:"page_id_undefined",
+        unit_id:"unit_id_undefined",
+        user_id:"user_id_undefined",
+        
     }; // private
     return {
         init: function(Args) {
-            _args = Args;
-            _args['task_id'] = parseInt(document.getElementById("assignment-job-id").innerHTML);
-            _args['worker_id'] = parseInt(document.getElementById("assignment-worker-id").innerHTML);
-            // Include Firebase library
+            _args = Object.assign(_args, Args);
             var logger = this;
             logger.init_firebase(function() {
                 logger.init_events_capturing();
@@ -60,9 +56,6 @@ var EDA_LOGGER = EDA_LOGGER || (function() {
         init_firebase: function(callback) {
             var firebase_script = document.createElement('script');
             firebase_script.src = "https://cdn.firebase.com/js/client/2.2.9/firebase.js";
-
-            log(firebase_script.src);
-
             document.getElementsByTagName('head')[0].appendChild(firebase_script);
             var logger = this;
             firebase_script.onload = function() {
@@ -72,14 +65,10 @@ var EDA_LOGGER = EDA_LOGGER || (function() {
                 // get the platform code from the url
                 var platform_code = document.location.hostname.replace(/\./g, '');
                 // form the firebase endpoint url
-                var firebase_endpoint_url = "https://" + settings.firebase.bucket + ".firebaseio.com/" + platform_code + "/" + _args["task_id"] + "/units/" + _args['key_value'] + "/assignments" + assignment_code;
+                var firebase_endpoint_url = "https://" + _args["firebase_bucket"] + ".firebaseio.com/" + platform_code + "/" + _args["page_id"] + "/units/" + _args['unit_id'] + "/users/" + _args['user_id'];
                 log(firebase_endpoint_url);
                 _args["firebase_assignment"] = new Firebase(firebase_endpoint_url);
-                /*_args["firebase_assignment"].update({
-                    key_name: _args.key_name,
-                    key_value: _args.key_value,
-                    unit_id: _args.key_value
-                });*/
+
                 _args["firebase_logs"] = _args["firebase_assignment"].child('sessions/' + settings.session + "/tab_visibilty");
                 _args["firebase_activity"] = _args["firebase_assignment"].child('sessions/' + settings.session + "/page_activity");
                 _args["firebase_keys"] = _args["firebase_assignment"].child('sessions/' + settings.session + "/key_pressed");
@@ -90,58 +79,23 @@ var EDA_LOGGER = EDA_LOGGER || (function() {
         },
         init_activity_capturing: function() {
             var logger = this;
-            var activity_statuses = {
-                "keyboard": 0,
-                "mouse": 0,
-                "scroll": 0,
-                "scroll_top":0,
-                "text_selected":0
-            };
-            setInterval(function() {
-                logger.log_event(_args["firebase_activity"], (function(a) {
-                    activity_statuses = {
-                        "keyboard": 0,
-                        "mouse": 0,
-                        "scroll": 0,
-                        "scroll_top":0,
-                        "text_selected":0
-                    };
-                    return a;
-                }(activity_statuses)));
-            }, settings.activity_interval);
-
-            document.onkeydown = function(evt) {
-                activity_statuses["keyboard"] = 1;
-            };
-            document.onmouseup = function(evt){
-                if (getSelectedText() != "")
-                    activity_statuses["text_selected"] = 1;
-            }
-            document.onmousemove = function(evt) {
-                activity_statuses["mouse"] = 1;
-            };
-
-            window.onscroll = function(evt) {
-                activity_statuses["scroll"] = 1;
-                activity_statuses["scroll_top"] = document.body.scrollTop;
-            };
-
+            
             document.onkeydown = function(evt) {
                 var key = evt.keyCode || evt.charCode;
                 logger.log_event(_args["firebase_keys"],{"key":key});
             };
             document.onmousedown = function(evt) {
-                var element_path = fullPath(evt.path[0]);
+                var element_path = fullPath(evt.target);
                 logger.log_event(_args["firebase_clicks"],{"element":element_path});
             };
         },
         init_events_capturing: function() {
             var logger = this;
-            // Log the task was opened by the worker
+            // Log the page was opened by the user
             logger.log_event(_args["firebase_logs"], {
                 status: "opened"
             });
-            // Log the task page was closed by the worker
+            // Log the page was closed by the user
             window.onbeforeunload = function() {
                 logger.log_event(_args["firebase_logs"], {
                     status: "closed"
