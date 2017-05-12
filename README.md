@@ -7,7 +7,7 @@ Behavior Tracker logs users activity (key presses, mouseclicks, tab visibility) 
 1. create a bucket at [firebase](http://firebase.google.com)
 2. integrate with your website: 
 ```html
-  <script src="https://raw.githubusercontent.com/ReLauncher/behavior-tracker/master/logger.js"></script>
+  <script src="https://relauncher.github.io/behavior-tracker/logger.js"></script>
   <script>
   BT.init({
     firebase_bucket: "YOUR_FIREBASE_BUCKET_NAME",
